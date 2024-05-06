@@ -1,0 +1,297 @@
+\chapter{Experiments \& results}
+
+In this chapter we describe the experiments we conducted with the toolchain composed of the tools introduced in the previous chapter. We also present the results of the experiments and undertake an analysis of the source of the errors made by the toolchain.
+
+In our main experiment, we determine whether annotation projection or zero-shot cross-lingual transfer performs better on our task of creating suggestions for a semantic ontology. We also give statistical significance for this finding. After concluding that zero-shot cross-lingual transfer performs better, we explore the shortcomings of annotation projection. We find that a fundamental limitation lies in the translation itself and that it often has a meaning too different to be useful for determining the semantic class on the other language side.
+
+In our second experiment, we determine the best parameters for our toolchain with the zero-shot cross-lingual transfer approach. Specifically, we explore what the best way to aggregate the predictions is. 
+
+\section{Is annotation projection or zero-shot transfer better?}
+\label{sec:exp1}
+
+We explore and compare the performance of annotation projection and zero-shot cross-lingual transfer. We conduct this experiment on the individual predictions, not on the aggregates. This allows us to explore the reasons behind the errors and better understand them.
+
+\subsection{Metrics}
+\label{subsec:metrics}
+Our focus is on two metrics --- recall and precision. The two metrics are widely used across computer science, and even in other fields (perhaps under different names). As there is some nuance in their usage, we dive into their definitions a little deeper.
+
+Recall is fundamentally defined as the ratio of correct predictions and the maximum number of correct predictions achievable. Precision is the ratio of correct predictions and the total number of predictions. In classification (into two classes, one of them being the positive class), recall and precision are defined as follows:
+\begin{equation*}
+\begin{split}
+\text{recall} & = \frac{\text{true positives}}{\text{true positives} + \text{false negatives} } \\[1em]
+\text{precision} & = \frac{\text{true positives}}{\text{true positives} + \text{false positives}}
+\end{split}
+\end{equation*}
+In information retrieval, recall is the ratio of the retrieved documents that are relevant and the total number of relevant documents, while precision is defined as the ratio of the retrieved documents that are relevant and the total number of retrieved documents.
+
+Our system has characteristics of both. While we indeed classify words into semantic classes, we need to find them in the text first. Even after we find the verb, annotation projection can in some sense reject to classify the verb if there is nothing aligned with it. Thus for a verb to be a correct prediction, three things need to happen:
+
+\begin{enumerate}
+    \itemsep0em
+    \item UDPipe 2 has to correctly classify it as a verb.
+    \item SimAlign needs to align it.
+    \item The SynSemClass classification model needs to classify it into the correct class.
+\end{enumerate}
+
+Step 2 is not needed with zero-shot cross-lingual transfer and we later show that this is a substantial advantage.
+
+Thus for our purposes, we define recall as the ratio of correct predictions as described above and the total number of gold verbs. Precision is the ratio of correct predictions and the number of verbs found by UDPipe 2, with annotation projection, they also need to be aligned.
+
+\subsection{Zero-shot cross-lingual transfer wins as a system}
+
+We now measure the performance of the two methods when composed into the whole system. In \cref{subs:components}, we measure the performance of each individual component.
+
+Our system consists of taking the raw sentences in the corpus (i.e., without the verb marks) and having UDPipe find the verbs in the Korean text. With zero-shot cross-lingual transfer, we predict the SynSemClass classes directly on the discovered Korean verbs. With annotation projection, we first use SimAlign to find the counterparts on the English side and make the predictions on the aligned English words. Here, many adjustments that could improve the precision of the alignments are possible, e.g., filtering the alignments for part-of-speech, finding the verbs on the English side and doing the alignments vice-verse, or somehow crosschecking these two approaches. To account for these possible changes, in \cref{subs:word_align}, we conduct an oracle experiment where we use manual gold word alignments.
+
+The results are presented in \cref{table:system_results}. On our data, zero-shot transfer significantly outperforms annotation projection in both metrics. As the amount of data we have is rather small, we also perform a statistical test. We chose to do a permutation test on sentences with Monte Carlo sampling with 10k samples. The results are in \cref{table:system_results}. They indicate that the findings are statistically significant.
+
+\begin{table}
+\centering
+\begin{tabular}{rcc} 
+  & Recall & Precision  \\
+ \hline
+ Annotation projection & 0.37 &  0.41 \\ 
+ Zero-shot transfer &  \textbf{0.54} & \textbf{0.54} \\
+ \hline
+ p-value & 0.00040 & 0.00110
+\end{tabular}
+\caption{Performance of the two methods used in the overall system with automatic verb identification and word alignment. The p-value indicates the probability of zero-shot transfer outperforming annotation projection by chance.}
+\label{table:system_results}
+\end{table}
+
+\subsection{Non-verbatim translation is a fundamental limitation}
+\label{subs:word_align}
+
+As we described in \cref{sec:eval_data}, during the manual annotation of alignment in the Korean corpus, we encountered many examples of verbs that did not have a proper counterpart on the English side. Thus we divide the gold manual alignments into three groups. In the \textit{none} group, no alignment is possible due to different phrasing and non-literal translation. The \textit{dubious} alignment group are verbs that had a verb of a wholly different meaning or not a verb at all as their aligned counterpart. The rest of verbs fall into the \textit{good} alignment group.
+
+We perform experiments on the portions of the data that contain only the given quality alignment group or better. For both zero-shot cross-lingual transfer and annotation projection, we remove UDPipe 2 and instead use our annotations directly. For annotation projection, we conduct the experiments both with and without the automatic word aligner. Note that is experiment also assumes perfect sentence alignment throughout. The results of the experiment, as well as how much of the data is covered by each quality requirement, are presented in \cref{table:alignment}. In this experiment, we simply use accuracy and omit recall or precision when they are equivalent to accuracy.
+
+We see that the good alignments make up only 73\% of the data. We consider this to be a significant limitation for the possible quality of annotation projection. The quality of the predictions increases as the quality of the alignment increases. The predictions on our manual alignment outperform the predictions on the automatically aligned words and the performance increases in accordance with our alignment groups. This is in accord with previous literature. \citet{behzad2023effect} recently reported on how manual correction of word alignment quality can improve performance on the downstream task.
+
+The experiment also reveals that the accuracy of the model in the zero-shot setting on Korean is 66\%. Interestingly, it is highest when all data are included and falls when we omit the sentences that had no alignment to English. We hypothesize that common fixed expressions are mostly translated non-verbatim, but we did not investigate this idea further. Annotation projection also achieves 66\% in its ideal setting with ideal word alignments. However, if automatic alignment is used, it again trails behind.  
+
+
+
+\begin{table}
+\centering
+\begin{tabular}{rccc} 
+& \multicolumn{3}{c}{Alignment type} \\
+ & None & Dubious & Good \\
+\hline
+\textbf{Coverage}  & 100\% & 83\% & 73\% \\
+\hline
+\textbf{Zero-shot} \\
+Accuracy & \textbf{66\%} & \textbf{62\%} & 62\% \\
+\hline
+\textbf{Annotation projection} \\
+\textit{manual alignments} \\
+Accuracy & 51\% & 61\% & \textbf{66\%} \\
+\textit{automatic alignments} \\
+Accuracy & 46\% & 52\% & 57\% \\
+Precision & 55\% & 58\% & 61\% \\
+\hline
+\textbf{Word alignment} \\
+Accuracy & 60\% & 62\% & 66\% \\
+Precision & 62\% & 69\% & 71\% \\
+Rejection rate & 16\% & 10\% & 6\% 
+\end{tabular}
+\caption{The quality of predictions and automatic word alignments under each type of alignment. We split the best possible word alignment into three categories introduced in \cref{sec:eval_data}. The coverage row describes how much of the data fits into this category or any better. We perform the experiments on this portion of the data. Where either precision or recall is not specified, its meaning is the same as accuracy. The word alignment section describes only the performance of the word aligner, not any predictions. Rejection rate is the ratio of words that were not aligned with anything.}
+\label{table:alignment}
+\end{table}
+
+\subsection{Error contribution of each component}
+\label{subs:components}
+
+In \cref{table:components}, we summarize the performance of each component. When we reported the results of the whole system in \cref{table:system_results}, the results reflected that the system can reject some input verb early on. This verb does not proceed to the next components, e.g., UDPipe 2 fails to find a specific verb. To truly see the effect of each individual component, we give them the gold results of the previous step as input. For this reason, the product of the performances of each individual component does not equal the performance of the whole system. Every component is penalized for failing on the same hard example, while the system could reject it early on.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll} 
+\multicolumn{2}{l}{\textbf{UDPipe 2 --- finding verbs}} \\
+\addlinespace
+Recall & 75\%\\
+Precision & 76\% \\
+Extra verbs per sentence & 0.85 \\
+\addlinespace
+\hline
+\addlinespace
+\multicolumn{2}{l}{\textbf{Translation}} \\
+\addlinespace
+Verbs alignable & 73\% \\
+\addlinespace
+\hline
+\addlinespace
+ \multicolumn{2}{l}{\textbf{SimAlign --- Word alignment}} \\
+ \addlinespace
+ Accuracy & 66\% \\
+ Precision & 71\% \\
+ \addlinespace
+ \hline
+ \addlinespace
+\multicolumn{2}{l}{\textbf{SynSemClass classification model}} \\
+\addlinespace
+Korean: Accuracy & 66\% \\
+English: Accuracy & 66\% \\
+\end{tabular}
+\caption{Performance of each component in separation. We also include the translation as a ``component'', as we believe it to be a integral part of annotation projection and a likely point of failure. The reported values are independent of each other --- they are measured in ideal conditions for that component (gold outputs of previous steps). Thus, if multiplied, they do not equal the results in \cref{table:system_results}. Here, each component is penalized for failing on the same hard examples the previous components failed on.}
+\label{table:components}
+\end{table}
+
+As we have seen, the accuracy of annotation projection is hindered by non-verbatim translation. More loose styles of translation are very common for high quality translations such as in our corpus. For this reason, we also think of translation as an inherent component of the annotation projection. Another crucial step we do not take into account is sentence alignment. We only work with examples that are properly aligned on the sentence level. During the annotation of our evaluation data, we discarded all sentences with improper sentence alignment.\footnote{We kept a few pairs where the source English sentence had extra words compared to the Korean target sentence, as this did not prevent word alignment.} Of the 54 sentences considered, we kept 72\% of them, however, some were discarded due to other reasons than bad alignment, e.g., a lack of any verbs.
+
+The results show that, on our data, the classification model performs roughly the same on English and Korean. This might be due to the Korean text being original and the English text being the translation, thus the English translation can be possibly slightly unnatural or perhaps just different than natural English text. We cannot rule out that the results would be different for translation in the opposite direction. However, in our setting, the translation and automatic alignment (both on words and likely on sentences) introduce extra error.
+
+\section{Best aggregation parameters}
+\label{sec:aggregation_experiment}
+
+We established that zero-shot cross-lingual transfer performs better than annotation projection. Now our goal is to produce the annotation suggestions for the SynSemClass ontology using the preferred method. We need to make the suggestions as aggregations of the the individual predictions, both for practical and technical reasons. The suggestions need to be of high quality and the optimum trade-off between the number of displayed and still relevant suggestions must be found in order to save the costly time of annotators. Here we try to determine what are the most efficient ways to aggregate the predictions for specific precision/recall requirements by studying the precision-recall curves.
+
+An annotation suggestion is a class-lemma pair and each suggestion appears at most once. This is given by the language-specific SynSemClass file format in which the suggestions are to be stored. The SynSemClass classification model gives us probabilities\footnote{The term probability might not be completely accurate here, as the values do not sum to 1 due to the way the problem is modeled as explained in \cref{sec:ssc_pred}.} how likely each example is to be of the given sense and we need to aggregate them into these suggestions. As we want to evaluate the best aggregation strategy as well as an optimal threshold on the final aggregation score, we need gold data of accepted and rejected suggestions. For this purpose we leverage our existing evaluation data. Alongside our manually annotated Korean--English parallel corpus, we also have the examples extracted from the existing ontology.
+
+Both of these datasets are gold annotated sentences, not samples of rejected and accepted annotation suggestions, but under the right assumptions, we can use them to decide whether an automatic suggestion should be rejected or accepted. We generate the suggestions using the text from the corpus and evaluate them using the following rules:
+
+\begin{enumerate}
+    \itemsep0em
+    \item If the suggestion contains a lemma that is not annotated in our gold data, the suggestion is ignored, i.e., considered neither correct nor wrong.
+    \item The suggestion is accepted if there exists an example in the corpus that supports that suggestion. This means there must be a sentence in the corpus that contains the same lemma with the class the suggestion is proposing.
+    \item Otherwise, we reject the suggestion.
+\end{enumerate}
+
+We need to apply step 1 because the examples from the ontology contain unannotated verbs. The sentences showcase a single class on a single verb, but a lot of the sentences contain other verbs that are not annotated. Unfortunately, this approach introduces several problems:
+
+\begin{enumerate}
+    \itemsep0em
+    \item[a)] If the system overgenerates, e.g., incorrectly labels a word as a verb, it is ignored. This can slightly inflate the measured performance.
+    \item[b)] A single lemma can have different meanings. Suppose that a lemma is present in the corpus with two meanings, but only one of them is annotated. If the system finds the unannotated verb and makes a suggestion based on it, it is incorrectly punished. This can lower the measured performance.
+    \item[c)] A slightly more nuanced version of problem b) --- even if all verbs in the corpus were annotated, we still do not cover every correct suggestion. The system might mislabel a verb with a class that is not correct in the given context, but might be correct in another context. As we also take into account other predictions than the top one, this might introduce some false errors.
+\end{enumerate}
+
+Fortunately, problems a) and b) do not apply to our Korean--English corpus, as we have manually labeled every verb. On the other hand, the corpus is very small, so the effect of aggregation is barely observable.
+
+We conduct the experiments and take the described problems into account when interpreting the results. On the Korean dataset, we do not apply the filtering rule (rule 1) as it is not needed as explained above. In all experiments, we generate precision-recall curves and compare the results. For easier comparison, we set the ranges of all figures to a fixed value, so some of the figures have a lot of empty padding. All experiments in this section use zero-shot cross-lingual transfer. To better understand the results, we also provide the the dataset sizes in \cref{table:dataset_size}.
+
+\begin{table}
+\centering
+\begin{tabular}{lc} 
+Language & Sentences \\
+\hline
+\textbf{Partially annotated} \\
+English & 7896 \\ 
+Czech & 8942 \\ 
+German & 985 \\ 
+\hline
+\textbf{Fully annotated} \\
+Korean & 39 \\ 
+\end{tabular}
+\caption{Dataset sizes in sentences.}
+\label{table:dataset_size}
+\end{table}
+
+\subsection{Best aggregation function}
+
+We consider four aggregation functions: average, maximum, summation and a probabilistically motivated function we shortly explain. As their input, the functions take all predictions on a specific lemma and a specific SynSemClass class. On each verb example, we consider all 884 predicted probabilities for each class, not just the top one. With the averaging function, we also conduct further experiments how limiting the tail predictions affects the results. For the maximum aggregation function, this limiting would have little effect due to it deciding only on the largest value for the given lemma-class pair.
+
+The probabilistic function assumes that the suggestion is correct, if at least one prediction is correct, and that the predictions are independent. The function is then defined as:
+
+$$
+prob(X) = 1 - \prod_i 1 - prob(X_i)
+$$
+
+\Cref{fig:agg_functions} shows the results. The German and Korean datasets do not show much difference between the functions. We believe this is due to their small sizes. Due to this, the effects of aggregation are hardly seen. On English and Czech, we can observe that for high precision (high thresholds, small recall), average is dominating. However, for high recall (small threshold, small precision), maximum wins. We explain this intuitively --- for a high recall, every high probability prediction is worth considering, even though there are a lot of small value predictions for this class-lemma pair.
+
+\begin{figure}[h]
+\centering
+
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/eng_fnc.svg}
+\end{subfigure}%
+%
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/ces_fnc.svg}
+\end{subfigure}
+
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/deu_fnc.svg}
+\end{subfigure}%
+%
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/ko-mini-raw_fnc.svg}
+\end{subfigure}
+
+\caption{Precision-recall curves for various aggregation functions.}
+\label{fig:agg_functions}
+\end{figure}
+
+\subsection{Preaggregation filtering}
+
+In the previous experiment, we considered all 884 values, one for each class, predicted by the classifier on each mention of a verb. This includes a lot of very small values around and below 1\% that influence the results. We test whether it is effective to filter those small values before aggregation. There two ways to do this --- setting a threshold for probability, e.g., ignoring everything below 5\%, or only considering the top $K$ predictions for each lemma. The results for the thresholding approaches are displayed in \cref{fig:agg_thr} and the results for top-$K$ are in \cref{fig:agg_prek}.
+
+\begin{figure}[h]
+\centering
+
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/eng_thr.svg}
+\end{subfigure}%
+%
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/ces_thr.svg}
+\end{subfigure}
+
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/deu_thr.svg}
+\end{subfigure}%
+%
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/ko-mini-raw_thr.svg}
+\end{subfigure}
+
+\caption{Precision-recall curves for filtering predictions with a probability threshold. Some curves suddenly end as they do not have a high recall portion. This is because the setting inherently only shows high precision results and completely filters out the unlikely suggestions.}
+\label{fig:agg_thr}
+\end{figure}
+
+
+
+\begin{figure}[h]
+\centering
+
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/eng_pre_k.svg}
+\end{subfigure}%
+%
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/ces_pre_k.svg}
+\end{subfigure}
+
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/deu_pre_k.svg}
+\end{subfigure}%
+%
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includesvg[width=1\linewidth]{img/pr/ko-mini-raw_pre_k.svg}
+\end{subfigure}
+
+\caption{Precision-recall curves for filtering predictions by taking only the top $K$ values into account for each lemma. Kinf means all values. Same as with \cref{fig:agg_thr}, some curves end abruptly and do not have a high recall portion. This is because the setting inherently only shows high precision results and completely filters out the unlikely suggestions. }
+\label{fig:agg_prek}
+\end{figure}
+
+We see trends similar to the results for aggregation functions. The curves for German and Korean, as well as the high precision parts of the curves for English and Czech behave the same. The curves suggest that it is better not to limit the input, i.e., no threshold and all predictions, not just top $K$ predictions. We see this as intuitive, if we take more input, we get more precise results and suggestions that are not certain are pushed down. For the high recall parts of the curve, a good threshold seems to be around 3\% and the best $K$, for top $K$ predictions, seems to be 3. At the same time, the maximum aggregation function performs very similarly to these two settings.
+
+\subsection{Possible limitations}
+
+We now consider the effects of the problems described earlier and think of how they affect the results. In a large corpus, we can encounter polysemantic verbs that often appear with two or more senses. It is possible that one of the senses is in our gold data while the others are not, even though they are all correct. As we aggregate a large number of predictions, the scores of these polysemantic verbs are lowered. This can give higher measured precision to the final suggestions, as the other senses of the polysemantic verbs are falsely labeled as errors, but with more predictions, their scores are lowered. This is in agreement with our observation that the aggregation function of average with no filtering performs the best for high precision of the suggestions. However, we see that average with no filtering performs well on Korean, too, and we think that Korean does not suffer from the described problems. The difference between average with no filtering and the other approaches is not as prominent there, but it is still clearly dominating.
+
+As for using maximum or filtering for higher recall, we would expect the opposite with the previous line of reasoning. Moreover, the actual difference might be even larger than we measured and using maximum and filtering might be more beneficial than our results suggest. While we lay some groundwork for the optimal parameters, we believe that it would be best to do the measurements again when the annotation phase starts and more data is available.
+
+

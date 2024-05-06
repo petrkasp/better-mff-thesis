@@ -1,0 +1,100 @@
+\chapter{Methodology}
+\label{chap:methodology}
+
+Our goal is to help the annotators of the SynSemClass ontology in adding a new language. We merely assume a parallel corpus, as opposed to the lexical resources and semantically annotated corpora available for the previously incorporated languages. To this end, we rely on a machine-learning classification model by \citet{SSC_LLM_Suggestions}. For a given sentence, this model is able to predict the SynSemClass class for a marked verb. In this context, we evaluate two methods, both using this model, for adding a new language to the ontology. We describe these two methods later in this chapter. Using this model, we produce a preannotated language file. This file contains the verbs and their example usages collected from the corpus, grouped into SynSemClass classes. The task of the human annotators is then to manually accept or decline the automatically generated suggestions.
+
+In this chapter, we describe the Korean data we use for our experiments and the methods we use to extract the annotation suggestions out of them. The details of our Python implementation are described in \cref{implementation} and the user documentation is in \cref{user_doc}.\footnote{Source code: \url{https://github.com/petrkasp/synsemclass-pipeline}}
+
+\section{Source data --- parallel corpora}
+\label{sec:data}
+
+After careful consideration we chose to work with data\footnote{\url{https://github.com/jungyeul/korean-parallel-corpora/tree/master/korean-english-news-v1}}  from \citet{park-etal-2016-korean}, in particular their news corpus. The data consists of about 97k sentences. It was crawled from Yahoo! Korea and Joins.com\footnote{The authors list the website as Joins CNN. According to Wikipedia, Joins.com is a (now defunct) website for the newspaper JoongAng Ilbo. We found no information about a link with CNN.} during 2010-2011. The authors provide no further information on the corpus, so the rest is just our observation. The data seem to be pieces of news articles from about 2000 to 2011. There are about 8~sentences per article and the sentences are ordered sequentially, that is in the order as they appeared in the text. Although no explicit article delimiters are included, the articles seem to be ordered chronologically, from the oldest to the newest. We believe the Korean text is original and the English translation is based on it. Sometimes, when English is translated into Korean, the Korean text can suffer from unusual syntactic structures and unnatural word choices. This phenomenon is known as translationese. Fortunately, in this corpus, both the Korean and English texts are of high quality. The sentence alignment is likely done automatically and there are many errors, both complete misalignments and ends or beginnings being cut off. Despite these shortcomings, we judged the corpus to be of the best quality among the parallel corpora available at the time.
+
+We also considered several corpora\footnote{\url{https://opus.nlpl.eu/results/en&ko/corpus-result-table}} from OPUS \parencite{opus}. Although the corpora are much bigger in size, they lack in quality. If we had needed a bigger corpus, our top choice would have been CCMatrix, both in terms of quality and its quantity of 19.4M sentences. The most common problem we see with the OPUS corpora are untranslated sentences aligned with each other. For example, this happens when a quote is left untranslated in the Korean text. Most of the texts also suffer from unnatural translation, although it is possible that this would have not been a problem for us given our focus on verbs.
+
+\section{UDPipe 2 --- finding verbs}
+
+While it is possible that the ontology will expand to different word classes, so far, only verbs are considered. For finding the verbs in the data, we use UDPipe 2 \parencite{straka-2018-udpipe}\footnote{\url{https://github.com/ufal/udpipe/tree/udpipe-2}}. UDPipe 2 is a trainable natural language processing (NLP) pipeline capable of sentence segmentation, tokenization, part-of-speech tagging, lemmatization and dependency parsing. It is trained on the data from Universal Dependencies (UD; \cite{nivre2016universal}). Universal Dependencies is a project that collects treebanks, i.e., corpora annotated for syntactic structure, and provides a unified annotation style and harmonized tagsets for morphological analysis annotation and dependency parsing. It currently contains treebanks for 147 languages. UDPipe 2 provides models for 71 of those languages. The rest of the languages only have small treebanks that are insufficient for training a model.
+
+UDPipe 2 takes in raw text and produces the requested annotations in the CoNNL-U format, which is the format used by Universal Dependencies. We use UDPipe 2 through the LINDAT UDPipe REST Service\footnote{\url{https://lindat.mff.cuni.cz/services/udpipe/}}. For further processing, we consider all words that are tagged \texttt{VERB}, with the exception of words that contain the `to be' \ortx{이}{i} morpheme or end with a common adjective suffix \ortx{스럽다}{seureobda}. We believe that words with this suffix are sometimes incorrectly tagged as verbs due to errors in the UD Korean treebanks. 
+
+\section{Getting Korean lemmas}
+
+We also use UDPipe 2 for finding the lemmas of the verbs. We use the lemmas to group the occurrences to better understand what the correct SynSemClass classes of the lemma are. Unluckily to us, the Korean UD treebanks contain morphological analysis in the lemma field. To get the lemma of a verb, we take the first one or two morphemes and attach the \ortx{다}{da} suffix, which is the suffix of Korean lemmas for verbs and adjectives (sometimes called the dictionary form). If the second morpheme is \ortx{하}{ha} `to do', \ortx{되}{doe} `to become' or \ortx{시키}{shiki} `to order', we replace it with \ortx{하}{ha} `to do' and attach the lemma suffix \ortx{다}{da}. Otherwise, we attach the \ortx{다}{da} suffix directly to the first morpheme.
+
+To explain, Korean verbs can be divided into two groups, ``native" verbs and \ortx{하다}{hada} verbs. The same holds for adjectives as they behave very similarly in terms of syntax. The ``native" verbs form a closed class, new members are rarely added, albeit the class is very large compared to typical closed classes like prepositions. The stem of a ``native" verb is a single morpheme, so we can attach the lemma suffix \ortx{다}{da} directly. Some examples of ``native'' verbs are \ortx{가다}{gada} `to go', \ortx{만들다}{mandeulda} `to make' or \ortx{기다리다}{gidarida} `to wait'.
+
+The \ortx{하다}{hada} verbs are an open class. When a foreign word is borrowed or a new concept needs to be named, a new verb enters the language as a \ortx{하다}{hada} verb. The class is not limited to borrowings and also contains native words (we use the term ``native'' for the other class because of a lack of a better term). \ortx{하다}{hada} verbs are formed by a noun followed by the \ortx{하다}{hada} suffix (where \ortx{다}{da} is the lemma suffix). While \ortx{하다}{hada} is a word on its own with the meaning of `to do', the meaning of the verbs it creates is hardly ``to do something'' in the English sense, e.g., \ortx{말하다}{malhada} `to speak, lit. speech+do', \ortx{행복하다}{haengboghada} `to be happy, lit. happiness+do' (adjective).
+
+The noun part and the \ortx{하다}{hada} part can often be separated, as seen on the example below.\vspace{0.8em}
+
+\begin{tabular}{llll}
+준비+를 & junbi+reul  &  & preparation+accusative \\
+안 & an  &  & not \\
+했어 & haess-eo  &  & didn't do (past tense of \ortx{하다}{hada}) \\
+\addlinespace
+\multicolumn{4}{l}{준비를 안 했어.} \\
+\multicolumn{4}{l}{junbireul an haesseo.} \\
+\multicolumn{4}{l}{(I) did not prepare.} \\
+\end{tabular}
+\vspace{0.8em}
+
+However, not all words are separable, e.g., \ortx{행복하다}{haengboghada}.
+
+The \ortx{하다}{hada} part can be replaced with other suffixes. \ortx{되다}{doeda} `to become' changes the word from active to passive voice and \ortx{시키다}{shikida} `to order' makes the meaning of `make someone do something'. We normalize these to `\ortx{하다}{hada}' to get more precise results. However, some nuance, and perhaps in some cases a wholly different meaning, can be lost.
+
+We note that our lemmatization is not perfect and there are most likely exceptions that break it. Throughout our experiments, we tried to account for everything that came up, but we likely did not cover everything possible.
+
+
+\section{SimAlign --- making word alignments}
+\label{section:simalign}
+
+For annotation projection, word alignments are required. We construct these with SimAlign\footnote{\url{https://github.com/cisnlp/simalign}} \parencite{jalili-sabet-etal-2020-simalign}. SimAlign is a word alignment algorithm based on word embeddings (vector representations of words). It does not require any parallel data for training, only a model that generates the embeddings. This is done with a multilingual large language model (LLM). Embeddings are generated for both sentences, and then words with the closest embeddings are matched. For the matching, the authors propose several algorithms. In their experiments, their novel algorithm IterMax came out on top, so we use this algorithm for the matching. For the language model, we chose XLM-RoBERTa base \parencite{xlmr}. 
+
+At the time of development, we believed SimAlign to be the state of the art, but improvements since have been made in the field \parencite{lai-etal-2022-cross, dou2021word}. In \cref{subs:word_align}, we conduct an experiment where we annotate the word alignment manually and discuss how a potential improvement in word alignment might influence the results.
+
+\section{Predicting SynSemClass classes}
+
+\subsection{SynSemClass classification model}
+\label{sec:ssc_pred}
+
+The SynSemClass classification model\footnote{\url{https://github.com/strakova/synsemclass_ml}} \parencite{SSC_LLM_Suggestions} is a classifier
+that predicts the SynSemClass class for a marked verb in the input sentence. The verb has to be marked with a caret (\textasciicircum) to determine what verb should be predicted if multiple verbs are in the sentence. (For example, the word `marked' in the following sentence has a mark, ``\mbox{we \textasciicircum{ }marked} the verb in this sentence.'') While \citet{SSC_LLM_Suggestions} only describe working with the Czech part of the ontology, they kindly provided us with a model that was fine-tuned on English, Czech and German data. The extra data for fine-tuning improve performance, reaching 88.83\% accuracy on the Czech test set, compared to 79.17\% accuracy for the model fine-tuned solely on Czech. The combined accuracy on all test data is 86.02\%, with 82.25\% on English and 90.91\% on German.
+
+The foundation for the classification model is the pretrained large language model RemBERT \parencite{chung2021rethinking}. RemBERT is a multilingual masked language model trained on text from Wikipedia and Common Crawl. The RemBERT training data spans 110 languages.\footnote{The full list is available here\\ \url{https://github.com/google-research/google-research/tree/master/rembert}} Masked language modeling is an idea first introduced by \citet{devlin2018bert}. A masked language model (MLM) is trained by masking several random tokens within the text and having the model predict the masked tokens. Unlike classical n-gram language models and generative LLMs, e.g., GPT-style models, the training procedure provides MLMs with the ability to make predictions based on right context. This makes it a good candidate for fine-tuning as classifiers.
+
+When modeling a problem with deep learning, many aspects of the problem need to be considered. One of them are the properties of the predicted data. Usually for classification, the assumption is that there is exactly one correct prediction (e.g., for digit classification, the input image contains exactly one digit 0--9). However, as the SynSemClass ontology is still in development, not all of the classes have been assigned yet. This means that some words do not belong to any class yet. One occurrence of a verb can also belong to multiple classes, if the meaning is not clear. Moreover, we want the model to help us identify suboptimal class definitions. Assume the model is often unsure between two specific classes. This might mean that the two classes are too similar and need merging. For these reasons, \citet{SSC_LLM_Suggestions} modeled the problem as circa 1000 separate binary classifications --- one for each class. This leads to an overwhelming number of negative examples for each classifier (most classes have only a few examples, and even the numerous classes make up only a small portion of the data). Thus during training, instead of using the standard cross entropy loss (an error function used during training) a modification called focal loss \parencite{lin-focal-loss} was used. According to the authors of focal loss, ``focal loss focuses training on a sparse set of hard examples and prevents the vast number of easy negatives from overwhelming the detector during training.''
+
+\subsection{Annotation projection}
+
+Cross-lingual annotation projection is a method that allows us to use a monolingual model to make automatic annotations for different languages other than the natively supported by the model. It relies on having parallel data with word alignments. The word alignments can be manual or they can be automatically generated. We described how we make automatic word alignments in the previous section \ref{section:simalign}.
+
+When working with annotation projection, we talk about two languages. The language supported by the classification model is called the \textit{source} language. We want to create annotations for another language that we call the \textit{target} language. Our source language is English and the target language is Korean. The monolingual model creates annotations in the parallel corpus on the source language text. Then the aligned words in the target language text are assumed to have the same annotation. This process can be quite noisy, due to both noise in the alignment and the classification model.
+
+\subsection{Zero-shot cross-lingual transfer}
+
+In our work, we assume no annotated data for our target language of Korean. However, as the classification model is based on a multilingual large language model, we can try to run it directly on the target language texts. This problem setup is called zero-shot cross-lingual transfer. In this setup, the model is faced with a task that it has not seen during training, but is expected to give reasonable predictions by generalizing the information obtained during pretraining and fine-tuning. See \cref{table:ssc_model} for the zero-shot accuracy of the models provided to us by \citet{SSC_LLM_Suggestions}. 
+
+\begin{table}
+\centering
+\begin{tabular}{ccc} 
+  & All data & Zero-shot \\
+ \hline
+ English & 82.25\% & 63.59\% (--18.66\%) \\ 
+ Czech & 88.83\% & 73.58\% (--15.25\%) \\
+ German & 90.91\% & 44.44\% (--46.47\%) \\
+\end{tabular}
+\caption{Accuracy of the SynSemClass classification models on the three languages available in the ontology. The results in the All data column are based on a single model fine-tuned on all three languages. The results in the Zero-shot column are each for a different model. These models saw no examples of the test language during fine-tuning and were fine-tuned only on the other two languages.}
+\label{table:ssc_model}
+\end{table}
+
+\section{Evaluation data}
+\label{sec:eval_data}
+
+To evaluate the two approaches described in the previous section, we need gold data. In order to be able to do this evaluation on Korean, we built a small corpus manually annotated for SynSemClass classes. Unlike the gold data for Czech, English and German extracted from the existing lexicon, we annotate every single verb in the sentences. This complete annotation alleviates some problems with the aggregation experiments we describe in \cref{sec:aggregation_experiment}.
+
+We start with the news corpus described in \cref{sec:data} and use both annotation projection and zero-shot cross-lingual transfer to give us suggestions for the classes. We then go and remove misaligned sentences (15 in total), add verbs missed by the system, fix incorrect word alignment and select correct SynSemClass classes for each of the verbs, all manually by hand. In order to give the best chances to annotation projection, we also denote how accurate our manual alignment is. In many cases, no good alignment is possible. This happens because the translation is not literal. For example, in one of the sentences, the phrase \ortx{실바가 이끄는 당의 붉은 깃발}{shilbaga ikkeuneun dang-ui bulg-eun gisbal} `the red flag of the party led by Silva' is translated as `his [Silva's] party's red flag'.
+
+In this manner, we manually annotate 131 verbs in 39 sentences. Selecting the correct SynSemClass class out of the total of 884 semantic classes was a very difficult and time consuming task, especially since the SynSemClass search tool was not available at the time.
+
+The format of the pregenerated suggestions and finished annotated parallel corpus is described in \cref{parallel_corpus_format}.

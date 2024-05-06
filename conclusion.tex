@@ -1,10 +1,8 @@
 
-\chapwithtoc{Conclusion}
+\chapwithtoc{Conclusions}
 
-In the conclusion, you should summarize what was achieved by the thesis. In a few paragraphs, try to answer the following:
-\begin{itemize}
-\item Was the problem stated in the introduction solved? (Ideally include a list of successfully achieved goals.)
-\item What is the quality of the result? Is the problem solved for good and the mankind does not need to ever think about it again, or just partially improved upon? (Is the incompleteness caused by overwhelming problem complexity that would be out of thesis scope\todo{This is quite common.}, or any theoretical reasons, such as computational hardness?)
-\item Does the result have any practical applications that improve upon something realistic?
-\item Is there any good future development or research direction that could further improve the results of this thesis? (This is often summarized in a separate subsection called `Future work'.)
-\end{itemize}
+We implemented and optimized a toolchain for creating annotation suggestions for the semantic ontology SynSemClass. Unlike the previous work on the ontology, we did not have access to any lexical or semantic resources. We evaluated two approaches --- annotation projection that uses a parallel corpus to project predicted classes from a source language to the target language, and zero-shot cross-lingual transfer that relies on the ability of a machine learning model to generalize to a language it was not trained on. For the purpose of the experiments, we developed and manually annotated for semantic classes a small Korean--English corpus. We found that zero-shot cross-lingual transfer performs significantly better both in terms of recall and precision and verified this statistically.
+
+In order to generate high-value annotation suggestions that are likely to be accepted by annotators, we compared various aggregation approaches using precision-recall curves. We found that taking the average of all predictions including all predictions for each example and not limited to the top one works well. In scenarios where high recall is desired, it seems beneficial to either use maximum instead of average, or take only the three best predictions, or only consider predictions with probability higher than 3\%.
+
+We also analyzed why zero-shot cross-lingual transfer performs better. We found that non-verbatim translation poses a fundamental problem as sometimes the text is rephrased in such a way that the verb disappears or changes meaning significantly. All of the additional steps introduce cascading errors while the raw predictions are of the same quality on either language, even if not specifically trained on it.

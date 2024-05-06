@@ -36,39 +36,44 @@
 %%% Fill in your details %%%
 
 % (Note: \xxx is a "ToDo label" which makes the unfilled visible. Remove it.)
-\def\ThesisTitle{\xxx{Thesis title}}
-\def\ThesisAuthor{\xxx{Your Name Surname}}
-\def\YearSubmitted{\xxx{YEAR}}
+\def\ThesisTitle{Cross-lingual transfer for the annotation of the SynSemClass ontology}
+\def\ThesisAuthor{Petr Kašpárek}
+\def\YearSubmitted{2024}
 
 % department assigned to the thesis
-\def\Department{\xxx{Name of the department}}
+\def\Department{Institute of Formal and Applied Linguistics}
 % Is it a department (katedra), or an institute (ústav)?
-\def\DeptType{\xxx{Department}}
+\def\DeptType{Institute}
 
-\def\Supervisor{\xxx{Supername Supersurname}}
-\def\SupervisorsDepartment{\xxx{department}}
+\def\Supervisor{prof. RNDr. Jan Hajič, Dr.}
+\def\SupervisorsDepartment{Institute of Formal and Applied Linguistics}
 
 % Study programme and specialization
-\def\StudyProgramme{\xxx{study programme}}
-\def\StudyBranch{\xxx{study branch}}
+\def\StudyProgramme{Computer Science}
+\def\StudyBranch{Artificial Intelligence}
 
 \def\Dedication{%
-Dedication. \xxx{It is nice to say thanks to supervisors, friends, family, book authors and food providers.}
+\chapter*{Dedication} I would like to thank my supervisor, prof. RNDr. Jan Hajič, Dr., for suggesting the thesis topic, giving me the opportunity to work on this project and also his help and advice throughout my work on the thesis.
+
+I also would like to thank the consultant of my thesis, RNDr. Jana Straková, Ph.D., for her dedicated help and advice, both on the technical implementation as well as on academic writing. I greatly appreciate the time she spent on giving me advice, detailed explanations of technical problems, as well as the time spent proof-reading the thesis.
+
+I would also like to thank my family.
 }
 
+% DEPENDENCY: thesis.xmpdata
 \def\AbstractEN{%
-\xxx{Abstracts are an abstract form of art. Use the most precise, shortest sentences that state what problem the thesis addresses, how it is approached, pinpoint the exact result achieved, and describe the applications and significance of the results. Highlight anything novel that was discovered or improved by the thesis. Maximum length is 200 words, but try to fit into 120. Abstracts are often used for deciding if a reviewer will be suitable for the thesis; a well-written abstract thus increases the probability of getting a reviewer who will like the thesis.}
+This work compares two approaches to automatic preannotation of semantic class to verbs in a sentence for the purpose of adding a new language to the SynSemClass ontology. Both approaches rely on a multilingual deep learning classification model fine-tuned on already annotated English, Czech and German data of the ontology. The first, more classical, approach is annotation projection. It uses a parallel corpus and the aforementioned model to make predictions on a source language already present in the ontology and projects the predictions onto the target language using automated word alignment. The second approach, zero-shot cross-lingual transfer, assumes that the multilingual properties of the underlying model are sufficient and that we can make reasonable predictions directly on the target language, even though the model was never trained for that specific task on the specific target language. For the purpose of evaluation, we manually build and annotate a small Korean language dataset to test the performance on a language significantly different from English, Czech and German. We conclude that the zero-shot approach performs notably better than the alignment approach (p $<$ 0.005) obtaining 0.54 both in recall and precision, compared to 0.37 and 0.41 in recall and precision respectively of the alignment approach. We perform an analysis of the errors and find that the extra steps of annotation projection introduce cascading errors and that loose translation poses a problem in itself.
 % ABSTRACT IS NOT A COPY OF YOUR THESIS ASSIGNMENT!
 }
 
 \def\AbstractCS{%
-\xxx{You will need to submit both Czech and English abstract to the SIS, no matter what language you use in the thesis. If writing in English, translate the contents of \texttt{\textbackslash{}AbstractEN} into this field. In case you do not speak czech, your supervisor should be able to help you with the translation.}
-}
+Tato práce porovnává dva přístupy k~automatické předanotaci sémantických tříd sloves ve větách za účelem přidání nového jazyka do ontologie SynSemClass. Oba přístupy vycházejí z vícejazyčného deep learning klasifikačního modelu, který byl fine-tunovaný na již anotovaných anglických, českých a~německých datech z ontologie. První, více tradiční, přístup je annotation projection. Používá paralelní korpus a~výše zmíněný model k~vytvoření predikcí na zdrojovém jazyce, který je již obsažen v ontologii, a~tyto predikce projektuje na cílový jazyk pomocí automatického word alignmentu. Druhý přístup, zero-shot cross-lingual transfer, předpokládá, že vícejazykové schopnosti deep learning modelu jsou dostatečné a~že můžeme vytvořit kvalitní predikce přímo na cílovém jazyce, i když model nebyl nikdy trénován pro danou úlohu na daném cílovém jazyce. Pro účely vyhodnocení ručně vytváříme a~anotujeme malý korejský dataset za účelem otestování výsledků na jazyce, který se významně liší od angličtiny, češtiny a~němčiny. Dospíváme k~závěru, že zero-shot transfer vykazuje výrazně lepší výkon než annotation projection (p $<$ 0,005), s hodnotami recall a~precision 0,54, ve srovnání s 0,37 recall a~0,41 precision u~annotation projection. Také provádíme analýzu chyb a~zjišťujeme, že dodatečné kroky annotation projection zavádějí kaskádovité chyby a~že volný překlad sám o~sobě představuje problém.}
 
 % 3 to 5 keywords (recommended), each enclosed in curly braces.
 % Keywords are useful for indexing and searching for the theses by topic.
+% DEPENDENCY: thesis.xmpdata
 \def\Keywords{%
-\xxx{{key} {words}}
+{annotation projection}, {zero-shot cross-lingual transfer}, {ontology}, {multilingual natural language processing}, {lexical semantics}
 }
 
 % If your abstracts are long and do not fit in the infopage, you can make the

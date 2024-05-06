@@ -1,4 +1,4 @@
-\documentclass[12pt,a4paper,twoside,openright]{report}
+\documentclass[12pt,a4paper]{report}
 \let\openright=\cleardoublepage
 
 \input{metadata}
@@ -42,11 +42,22 @@
 \usepackage{caption}
 \usepackage{floatrow}
 
+\usepackage{kotex}
+\usepackage{svg}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+
+%\usepackage[natbib,style=authoryear,sorting=none,maxcitenames=1,maxnames=1,maxbibnames=6]{biblatex}
+
+\usepackage[backend=bibtex,natbib,style=authoryear,maxcitenames=2, maxbibnames=6, minbibnames=6, dashed=false]{biblatex}
+
+%\usepackage[style=authoryear,sorting=none,maxcitenames=1,maxnames=1,maxbibnames=6]{biblatex}
+
 % Bibliography formatting.
 % CHECK THE REQUIREMENTS OF YOUR DEPARTMENT AND FACULTY ON THE CITATION FORMAT!
 %
 % These are relatively "safe" default options that most people use:
-\usepackage[natbib,style=numeric,sorting=none]{biblatex}
+%\usepackage[natbib,style=numeric,sorting=none]{biblatex}
 % alternative with alphanumeric citations (more informative than numbers, and
 % more common in computer science journals):
 %\usepackage[natbib,style=alphabetic]{biblatex}
@@ -108,6 +119,8 @@
 
 \input{todos} % remove this before compiling the final version
 
+
+
 \input{macros} % use this file for various custom definitions
 
 
@@ -117,18 +130,24 @@
 
 \tableofcontents
 
-\include{intro}
-\include{ch1}
-\include{ch2}
-\include{ch3}
+\include{introduction}
+
+\include{background}
+
+\include{methodology}
+
+\include{experiments}
+
+%\include{discussion}
+
 \include{conclusion}
 \include{bibliography}
 
 \appendix
-\include{howto}
+\include{using_the_pipeline}
+\include{implementation}
+\include{parallel_corpus_format}
 
-% if your attachments are complicated, describe them in a separate appendix
-%\include{attachments}
 
 \openright
 \end{document}

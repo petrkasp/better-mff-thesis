@@ -1,0 +1,68 @@
+\chapter{Using the pipeline}
+\label{user_doc}
+
+The pipeline is run through the \texttt{main.py} script (located in the \texttt{scripts} folder). The pipeline uses corpora in one or two languages. The \textit{target} language is the one that is yet to be added to the ontology and which we want to pre-annotate. The second language is the \textit{source} language. It is used to provide possibly better suggestions for annotations of the target language. The source language is usually English, but not necessarily. \vspace{0.8em}
+
+\noindent
+The \texttt{main.py} script accepts the following arguments: \\ (See \texttt{.vscode/launch.json}\footnote{\url{https://github.com/petrkasp/synsemclass-pipeline/blob/main/.vscode/launch.json}} for examples.)
+
+\begin{itemize}
+    \item \texttt{task}: chooses the task, possible values are
+    \begin{itemize}
+        \item \texttt{corpus}: Generates a corpus with suggested SynSemClass annotations.
+        \item \texttt{ssc}: Generates a SynSemClass (SSC) language-specific file with suggested annotations. 
+        \item \texttt{evaluate}: Evaluates the quality of the pipeline suggestions using given gold data.
+        \item \texttt{pred-matrix}: Creates and saves a compact representation of all the predictions for use in experiments.
+    \end{itemize}
+\end{itemize}
+
+\noindent
+The following arguments are used by all tasks:
+\begin{itemize}
+    \item \texttt{udpipe-service}: URL to the UDPipe service \\ (default: \texttt{https://lindat.mff.cuni.cz/services/udpipe/api})
+    \item \texttt{udpipe-model-target} (required): UDPipe model for the target language, a two letter language code can be used to select a model automatically.
+    \item \texttt{udpipe-model-source}: UDPipe model for the source language.
+    \item \texttt{ssc-pred-model} (required): path to the model used for SynSemClass predictions
+    \item \texttt{lemmatization}: path to the script to perform lemmatization. The script should contain a function called \texttt{lemmatize} that takes a word from the \texttt{ufal.udpipe} package and returns the lemma. If not provided, the lemma returned by UDPipe 2 is used.
+    \item \texttt{verb-filter}: path to the script to perform verb filtering. The script should contain a function called \texttt{verb\_filter} that takes a word from the \texttt{ufal.udpipe} package and True iff the word should be considered for the pipeline. If not provided, all words marked as \texttt{VERB} by UDPipe 2 will be used.
+\end{itemize}
+
+\noindent
+An example lemmatization and verb filtering script can be found in \\ \texttt{scripts/ko\_filter\_lemma.py}.\footnote{\url{https://github.com/petrkasp/synsemclass-pipeline/blob/main/scripts/ko_filter_lemma.py}} \\
+
+\noindent
+The following arguments are used for the corpus and ssc tasks:
+\begin{itemize}
+    \item \texttt{output}: path to where the output corpus/SynSemClass file will be produced.
+\end{itemize}
+
+\noindent
+Either of these should be provided:
+\begin{itemize}
+    \item \texttt{target-corpus}: Plain text corpus of the target language. (Sentence per line)
+    \item \texttt{source-corpus}: Corpus parallel to the target corpus in the source language.
+\end{itemize}
+Or:
+\begin{itemize}
+    \item \texttt{tmx-corpus}: A parallel corpus in the tmx format.
+\end{itemize}
+
+\noindent
+The following arguments are used for the ssc task:
+\begin{itemize}
+    \item \texttt{lang-name}: Three letter language code that is inserted into the SynSemClass file.
+    \item \texttt{corpref}: A short name of the corpus to be inserted into the SynSemClass file.
+    \item \texttt{member-threshold}: The threshold for members. Members with lower scores will not be put into the SynSemClass file.
+    \item \texttt{aggregation}: The aggregation function to use.
+    \item \texttt{predict-max-k}: Only top K predictions for each example will be taken into account.
+    \item \texttt{example-threshold}: Only predictions with higher probability will be taken into account.
+    \item \texttt{example-count}: Number of examples to show for each member in the SynSemClass file.
+\end{itemize}
+
+
+\noindent
+The following argument is used for the evaluation task:
+\begin{itemize}
+    \item \texttt{evaluation-corpus}: Golden data used as evaluation in the format as produced by the corpus task (see below for description).
+\end{itemize}
+
